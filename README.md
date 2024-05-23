@@ -1,35 +1,42 @@
 Pending ...
 
-# System Variable Manager
+# BackupBanana
 
-System Variable Manager is a versatile application designed to manage and monitor system environment variables. This user-friendly desktop application simplifies the process of adding, editing, deleting, and applying environment variables, ensuring efficient system management and customization.
+BackupBanana is a user-friendly, incremental backup application designed to simplify the process of creating and managing backups. This standalone application allows you to schedule backups, preview changes, and manage tasks, ensuring your important files are always backed up efficiently.
 
 ## Key Features
 
-- **Add Environment Variables**: Easily add new system environment variables with a user-friendly interface.
-- **Edit Environment Variables**: Modify existing environment variables to update their values as needed.
-- **Delete Environment Variables**: Remove environment variables that are no longer needed.
-- **Apply Environment Variables**: Apply changes to environment variables to ensure they take effect immediately.
-- **Display Environment Variables**: View all stored environment variables in a structured format.
+- **Incremental Backup**: Only copies new or modified files since the last backup, saving time and space.
+- **Task Management**: Create and save backup tasks with specific source and destination directories.
+- **Scheduling**: Schedule tasks to run at specific times (daily, weekly, etc.).
+- **Preview Changes**: Preview the files that will be copied or modified before starting the backup.
+- **Progress Bar**: Visual indication of the backup progress.
+- **Error Logging**: Log files and folders that could not be backed up due to permission errors.
+- **History and Logs**: View the history of backups and error logs.
 
 ## Getting Started
 
 ### Prerequisites
 
-Before running System Variable Manager, you need to have Python installed on your machine, along with the following library: `Gooey`.
+Before running BackupBanana, you need to have the following installed on your machine:
+- Python 3.x
+- PyQt5
+- Matplotlib
+- Schedule
 
 ### Installation
 
-1. Clone the repository or download the `main.py` script to your local machine.
-2. Install the required Python library with the following command:
+1. Clone the repository or download the script to your local machine.
+2. Install the required Python libraries with the following command:
    ```sh
-   pip install Gooey
+   pip install pyqt5 matplotlib schedule
+
 
 ### Screenshots
-| ![Add VAR to JSON](screenshots/add_var.png) | ![Apply SYS Var](screenshots/apply_var.png)  |
-|:-------------------------------------------:|:--------------------------------------------:|
-|               Add VAR to JSON               |                   Apply SYS Var                    |
-|    ![Sys Vars](screenshots/SYS_VAR.png)     | ![Display VARs](screenshots/display_var.png) |
-|              Sys Vars Windows               |                   Display VARs                    |
+| ![Screen1](screenshots/add_var.png) |  ![Screen2](screenshots/apply_var.png)  |
+|:-----------------------------------:|:---------------------------------------:|
+|           Add VAR to JSON           |              Apply SYS Var              |
+| ![Screen3](screenshots/SYS_VAR.png) | ![Screen4](screenshots/display_var.png) |
+|          Sys Vars Windows           |              Display VARs               |
 
 
