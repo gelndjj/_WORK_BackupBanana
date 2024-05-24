@@ -145,7 +145,7 @@ class BackupApp(QWidget):
         self.setLayout(layout)
         self.setWindowTitle("Incremental Backup Application")
         self.setGeometry(300, 300, 1000, 600)
-        self.setWindowIcon(QIcon('icon.icns'))
+        self.setWindowIcon(QIcon('appicon.icns'))
 
     def init_main_tab(self):
         layout = QVBoxLayout()
