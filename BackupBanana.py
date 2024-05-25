@@ -37,7 +37,7 @@ class BackupThread(QThread):
         super().__init__(parent)
         self.source = source
         self.destination = destination
-        self.error_log = []
+        self.error_log = []  # List to store error logs
 
     def run(self):
         try:
@@ -81,7 +81,7 @@ class BackupThread(QThread):
                 "modified_folders": len(modified_folders_list),
                 "source": self.source,
                 "destination": self.destination,
-                "errors": self.error_log
+                "errors": self.error_log  # Add the error log to the result
             }
             self.backup_finished.emit(result)
 
@@ -102,21 +102,29 @@ class SchedulerThread(QThread):
     def stop(self):
         self.running = False
 
+def get_executable_directory():
+    if getattr(sys, 'frozen', False):
+        # Running in a bundle
+        return os.path.dirname(sys.executable)
+    else:
+        # Running in a normal Python environment
+        return os.path.dirname(os.path.abspath(__file__))
+
 class BackupApp(QWidget):
     def __init__(self):
         super().__init__()
 
         self.source = ""
         self.destination = ""
-        self.tasks = {}
-        self.history = self.load_history()
-        self.log = self.load_log()
+        self.tasks = {}  # Initialize tasks attribute
+        self.history = self.load_history()  # Load history
+        self.log = self.load_log()  # Load log
         self.scheduler_thread = SchedulerThread()
         self.scheduler_thread.start()
 
         self.initUI()
-        self.tasks = self.load_tasks()
-        self.update_tasks_list()
+        self.tasks = self.load_tasks()  # Load tasks after UI initialization
+        self.update_tasks_list()  # Update task list after loading tasks
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -149,8 +157,8 @@ class BackupApp(QWidget):
 
     def init_main_tab(self):
         layout = QVBoxLayout()
-        layout.setSpacing(10)
-        layout.setContentsMargins(10, 10, 10, 10)  # (left, top, right, bottom)
+        layout.setSpacing(10)  # Set spacing between widgets
+        layout.setContentsMargins(10, 10, 10, 10)  # Set margins (left, top, right, bottom)
 
         self.style_label = QLabel("Select Style:")
         self.style_label.setFixedHeight(30)
@@ -159,7 +167,6 @@ class BackupApp(QWidget):
         self.style_combo = QComboBox()
         self.style_combo.addItems(QStyleFactory.keys())
         self.style_combo.currentIndexChanged[str].connect(self.change_style)
-        self.style_combo.setFixedHeight(30)
         layout.addWidget(self.style_combo)
 
         # Set default style to Fusion
@@ -206,6 +213,7 @@ class BackupApp(QWidget):
     def change_style(self, style_name):
         QApplication.setStyle(QStyleFactory.create(style_name))
 
+    # Helper method to get the directory of the executable
     def get_executable_directory(self):
         if getattr(sys, 'frozen', False):
             # Running in a bundle
@@ -362,7 +370,7 @@ class BackupApp(QWidget):
         QMessageBox.information(self, "Task Deleted", "Selected task(s) have been deleted successfully.")
 
     def load_tasks(self):
-        tasks_file = os.path.join(self.get_executable_directory(), "tasks.json")
+        tasks_file = os.path.join(get_executable_directory(), "tasks.json")
         if os.path.exists(tasks_file):
             with open(tasks_file, "r") as f:
                 tasks = json.load(f)
@@ -381,7 +389,7 @@ class BackupApp(QWidget):
             self.tasks_list.addItem(item)
 
     def save_tasks(self):
-        tasks_file = os.path.join(self.get_executable_directory(), "tasks.json")
+        tasks_file = os.path.join(get_executable_directory(), "tasks.json")
         with open(tasks_file, "w") as f:
             json.dump(self.tasks, f)
 
@@ -504,14 +512,14 @@ class BackupApp(QWidget):
             self.update_log_list()
 
     def load_log(self):
-        log_file = os.path.join(self.get_executable_directory(), "log.json")
+        log_file = os.path.join(get_executable_directory(), "log.json")
         if os.path.exists(log_file):
             with open(log_file, "r") as f:
                 return json.load(f)
         return []
 
     def save_log(self):
-        log_file = os.path.join(self.get_executable_directory(), "log.json")
+        log_file = os.path.join(get_executable_directory(), "log.json")
         with open(log_file, "w") as f:
             json.dump(self.log, f)
 
@@ -574,12 +582,12 @@ class BackupApp(QWidget):
         return new_files, modified_files, total_size
 
     def save_history(self):
-        history_file = os.path.join(self.get_executable_directory(), "history.json")
+        history_file = os.path.join(get_executable_directory(), "history.json")
         with open(history_file, "w") as f:
             json.dump(self.history, f)
 
     def load_history(self):
-        history_file = os.path.join(self.get_executable_directory(), "history.json")
+        history_file = os.path.join(get_executable_directory(), "history.json")
         if os.path.exists(history_file):
             with open(history_file, "r") as f:
                 return json.load(f)
