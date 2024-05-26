@@ -24,8 +24,10 @@ import os, shutil, json, schedule, time, sys
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QMessageBox, QProgressBar, QListWidget, QTabWidget, QLineEdit, QListWidgetItem, QComboBox, QTimeEdit, QSplitter, QStyleFactory
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTime
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+                             QFileDialog, QMessageBox, QProgressBar, QListWidget, QTabWidget, QLineEdit,
+                             QListWidgetItem, QComboBox, QTimeEdit, QSplitter, QStyleFactory, QSystemTrayIcon, QMenu)
 from PyQt5.QtGui import QIcon
 
 class BackupThread(QThread):
@@ -37,7 +39,7 @@ class BackupThread(QThread):
         super().__init__(parent)
         self.source = source
         self.destination = destination
-        self.error_log = []  # List to store error logs
+        self.error_log = []
 
     def run(self):
         try:
@@ -81,7 +83,7 @@ class BackupThread(QThread):
                 "modified_folders": len(modified_folders_list),
                 "source": self.source,
                 "destination": self.destination,
-                "errors": self.error_log  # Add the error log to the result
+                "errors": self.error_log
             }
             self.backup_finished.emit(result)
 
@@ -104,10 +106,8 @@ class SchedulerThread(QThread):
 
 def get_executable_directory():
     if getattr(sys, 'frozen', False):
-        # Running in a bundle
         return os.path.dirname(sys.executable)
     else:
-        # Running in a normal Python environment
         return os.path.dirname(os.path.abspath(__file__))
 
 class BackupApp(QWidget):
@@ -116,15 +116,16 @@ class BackupApp(QWidget):
 
         self.source = ""
         self.destination = ""
-        self.tasks = {}  # Initialize tasks attribute
-        self.history = self.load_history()  # Load history
-        self.log = self.load_log()  # Load log
+        self.tasks = {}
+        self.history = self.load_history()
+        self.log = self.load_log()
         self.scheduler_thread = SchedulerThread()
         self.scheduler_thread.start()
 
         self.initUI()
-        self.tasks = self.load_tasks()  # Load tasks after UI initialization
-        self.update_tasks_list()  # Update task list after loading tasks
+        self.init_tray_icon()
+        self.tasks = self.load_tasks()
+        self.update_tasks_list()
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -157,8 +158,8 @@ class BackupApp(QWidget):
 
     def init_main_tab(self):
         layout = QVBoxLayout()
-        layout.setSpacing(10)  # Set spacing between widgets
-        layout.setContentsMargins(10, 10, 10, 10)  # Set margins (left, top, right, bottom)
+        layout.setSpacing(10)
+        layout.setContentsMargins(10, 10, 10, 10)
 
         self.style_label = QLabel("Select Style:")
         self.style_label.setFixedHeight(30)
@@ -169,7 +170,6 @@ class BackupApp(QWidget):
         self.style_combo.currentIndexChanged[str].connect(self.change_style)
         layout.addWidget(self.style_combo)
 
-        # Set default style to Fusion
         fusion_index = self.style_combo.findText("Fusion", Qt.MatchFixedString)
         if fusion_index >= 0:
             self.style_combo.setCurrentIndex(fusion_index)
@@ -213,15 +213,6 @@ class BackupApp(QWidget):
     def change_style(self, style_name):
         QApplication.setStyle(QStyleFactory.create(style_name))
 
-    # Helper method to get the directory of the executable
-    def get_executable_directory(self):
-        if getattr(sys, 'frozen', False):
-            # Running in a bundle
-            return os.path.dirname(sys.executable)
-        else:
-            # Running in a normal Python environment
-            return os.path.dirname(os.path.abspath(__file__))
-
     def init_preview_tab(self):
         layout = QVBoxLayout()
         self.preview_layout = layout
@@ -238,6 +229,7 @@ class BackupApp(QWidget):
         self.task_name_input = QLineEdit()
         self.task_name_input.setPlaceholderText("Enter task name")
         self.task_name_input.setFixedHeight(30)
+        self.task_name_input.textChanged.connect(self.on_task_name_changed)  # Add this line
         layout.addWidget(self.task_name_input)
 
         self.task_source_button = QPushButton("Set Task Source Directory")
@@ -323,8 +315,44 @@ class BackupApp(QWidget):
         layout.addWidget(splitter)
         self.log_tab.setLayout(layout)
 
+    def init_tray_icon(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon('appicon.ico'))
+
+        tray_menu = QMenu()
+
+        restore_action = tray_menu.addAction("Restore")
+        restore_action.triggered.connect(self.show)
+
+        exit_action = tray_menu.addAction("Exit")
+        exit_action.triggered.connect(QApplication.instance().quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)  # Add this line
+        self.tray_icon.show()
+
+    def closeEvent(self, event):
+        event.ignore()
+        self.hide()
+        self.tray_icon.showMessage(
+            "BackupBanana",
+            "The application is still running for scheduled backups.",
+            QSystemTrayIcon.Information,
+            2000
+        )
+
+    def on_tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show()
+
     def update_day_combo_visibility(self, index):
         self.day_combo.setVisible(index == 2)
+
+    def on_task_name_changed(self, text):
+        if text:
+            self.save_task_button.setEnabled(True)
+        else:
+            self.save_task_button.setEnabled(False)
 
     def set_task_source(self):
         self.task_source = QFileDialog.getExistingDirectory(self, "Select Task Source Directory")
@@ -333,9 +361,13 @@ class BackupApp(QWidget):
         self.task_destination = QFileDialog.getExistingDirectory(self, "Select Task Destination Directory")
 
     def save_task(self):
-        task_name = self.task_name_input.text()
-        if not task_name or not self.task_source or not self.task_destination:
-            QMessageBox.critical(self, "Error", "Task name, source, and destination must be set.")
+        task_name = self.task_name_input.text().strip()
+        if not task_name:
+            QMessageBox.critical(self, "Error", "Task name must be set.")
+            return
+
+        if not self.task_source or not self.task_destination:
+            QMessageBox.critical(self, "Error", "Source and destination must be set.")
             return
 
         schedule_info = {
@@ -344,11 +376,20 @@ class BackupApp(QWidget):
             "day": self.day_combo.currentText() if self.frequency_combo.currentIndex() == 2 else None
         }
 
-        self.tasks[task_name] = {
+        new_task = {
             "source": self.task_source,
             "destination": self.task_destination,
             "schedule": schedule_info
         }
+
+        if task_name in self.tasks:
+            self.tasks[task_name] = new_task
+        else:
+            old_task_name = next((name for name, info in self.tasks.items() if info == new_task), None)
+            if old_task_name:
+                del self.tasks[old_task_name]
+            self.tasks[task_name] = new_task
+
         self.save_tasks()
         self.update_tasks_list()
         QMessageBox.information(self, "Task Saved", "Task has been saved successfully.")
@@ -375,16 +416,29 @@ class BackupApp(QWidget):
             with open(tasks_file, "r") as f:
                 tasks = json.load(f)
                 for task_name, task_info in tasks.items():
-                    # Schedule only if frequency is not "Once"
                     if task_info["schedule"]["frequency"] != "Once":
-                        self.schedule_task(task_name)
+                        try:
+                            self.schedule_task(task_name)
+                        except KeyError as e:
+                            print(f"Error scheduling task: {task_name}. Missing key: {str(e)}")
+                        except Exception as e:
+                            print(f"Unexpected error scheduling task: {task_name}. Error: {str(e)}")
                 return tasks
         return {}
 
     def update_tasks_list(self):
         self.tasks_list.clear()
         for task_name, task_info in self.tasks.items():
-            item_text = f"{task_name} - Source: {task_info['source']} - Destination: {task_info['destination']}"
+            schedule_info = task_info['schedule']
+            frequency = schedule_info['frequency']
+            time = schedule_info['time']
+            day = schedule_info['day']
+            if frequency == 'Weekly':
+                schedule_text = f"{frequency} at {time} on {day}"
+            else:
+                schedule_text = f"{frequency} at {time}"
+
+            item_text = f"{task_name} - Source: {task_info['source']} - Destination: {task_info['destination']} - Schedule: {schedule_text}"
             item = QListWidgetItem(item_text)
             self.tasks_list.addItem(item)
 
@@ -394,13 +448,11 @@ class BackupApp(QWidget):
             json.dump(self.tasks, f)
 
     def reset_preview_layout(self):
-        # Clear the preview layout
         for i in reversed(range(self.preview_layout.count())):
             widget = self.preview_layout.itemAt(i).widget()
             if widget is not None:
                 widget.setParent(None)
 
-        # Add the "Load Preview Changes" button back
         self.preview_changes_button = QPushButton("Load Preview Changes")
         self.preview_changes_button.clicked.connect(self.preview_changes)
         self.preview_layout.addWidget(self.preview_changes_button)
@@ -412,17 +464,33 @@ class BackupApp(QWidget):
         item_text = item.text()
         task_name = item_text.split(' - ')[0]
         task = self.tasks[task_name]
+
         self.source = task["source"]
         self.destination = task["destination"]
         self.source_label.setText(f"Source Directory: {self.source}")
         self.destination_label.setText(f"Destination Directory: {self.destination}")
 
+        self.task_name_input.setText(task_name)
+        schedule_info = task["schedule"]
+        self.frequency_combo.setCurrentText(schedule_info["frequency"])
+        self.time_edit.setTime(QTime.fromString(schedule_info["time"], "HH:mm"))
+
+        if schedule_info["frequency"] == "Weekly":
+            self.day_combo.setCurrentText(schedule_info["day"])
+            self.day_combo.setVisible(True)
+        else:
+            self.day_combo.setVisible(False)
+
+        self.save_task_button.setEnabled(False)
+
     def schedule_task(self, task_name):
+        if task_name not in self.tasks:
+            raise KeyError(f"Task '{task_name}' not found in tasks dictionary")
+
         task = self.tasks[task_name]
         schedule_info = task["schedule"]
         time_str = schedule_info["time"]
 
-        # Skip scheduling if frequency is "Once"
         if schedule_info["frequency"] == "Once":
             return
 
@@ -444,19 +512,18 @@ class BackupApp(QWidget):
     def set_source(self):
         self.source = QFileDialog.getExistingDirectory(self, "Select Source Directory")
         self.source_label.setText(f"Source Directory: {self.source}")
-        self.reset_preview_layout()  # Reset the preview layout
+        self.reset_preview_layout()
 
     def set_destination(self):
         self.destination = QFileDialog.getExistingDirectory(self, "Select Destination Directory")
         self.destination_label.setText(f"Destination Directory: {self.destination}")
-        self.reset_preview_layout()  # Reset the preview layout
+        self.reset_preview_layout()
 
     def preview_changes(self):
         if not self.source or not self.destination:
             QMessageBox.critical(self, "Error", "Both source and destination directories must be set.")
             return
 
-        # Clear the previous content
         for i in reversed(range(self.preview_layout.count())):
             widget = self.preview_layout.itemAt(i).widget()
             if widget is not None:
@@ -488,7 +555,12 @@ class BackupApp(QWidget):
 
         new_files, modified_files, _ = self.get_changes()
         if not new_files and not modified_files:
-            QMessageBox.information(self, "Backup", "No changes detected.")
+            self.tray_icon.showMessage(
+                "BackupBanana",
+                "No changes detected.",
+                QSystemTrayIcon.Information,
+                2000
+            )
             return
 
         self.progress_bar.setValue(0)
@@ -499,7 +571,12 @@ class BackupApp(QWidget):
         self.thread.start()
 
     def backup_finished(self):
-        QMessageBox.information(self, "Backup", "Backup completed successfully.")
+        self.tray_icon.showMessage(
+            "BackupBanana",
+            "Backup completed successfully.",
+            QSystemTrayIcon.Information,
+            2000
+        )
 
     def record_history(self, result):
         self.history.append(result)
@@ -510,6 +587,21 @@ class BackupApp(QWidget):
             self.log.append(result)
             self.save_log()
             self.update_log_list()
+
+        if result['copied_files'] == 0 and result['modified_files'] == 0:
+            self.tray_icon.showMessage(
+                "BackupBanana",
+                "No changes detected.",
+                QSystemTrayIcon.Information,
+                2000
+            )
+        else:
+            self.tray_icon.showMessage(
+                "BackupBanana",
+                "Backup completed successfully.",
+                QSystemTrayIcon.Information,
+                2000
+            )
 
     def load_log(self):
         log_file = os.path.join(get_executable_directory(), "log.json")
