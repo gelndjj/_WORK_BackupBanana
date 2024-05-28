@@ -43,6 +43,9 @@ class BackupThread(QThread):
 
     def run(self):
         try:
+            if not os.path.exists(self.destination):
+                raise Exception("Destination directory is not reachable.")
+
             total_files = sum([len(files) for r, d, files in os.walk(self.source)])
             copied_files = 0
             copied_files_list = []
@@ -103,6 +106,7 @@ class SchedulerThread(QThread):
 
     def stop(self):
         self.running = False
+        print("Scheduler stopped")
 
 def get_executable_directory():
     if getattr(sys, 'frozen', False):
@@ -484,6 +488,7 @@ class BackupApp(QWidget):
         self.save_task_button.setEnabled(False)
 
     def schedule_task(self, task_name):
+        print(f"Scheduling task: {task_name}")
         if task_name not in self.tasks:
             raise KeyError(f"Task '{task_name}' not found in tasks dictionary")
 
@@ -492,19 +497,25 @@ class BackupApp(QWidget):
         time_str = schedule_info["time"]
 
         if schedule_info["frequency"] == "Once":
+            print(f"Task {task_name} is set to run once.")
             return
-
-        time_parts = time_str.split(":")
-        hour, minute = int(time_parts[0]), int(time_parts[1])
 
         if schedule_info["frequency"] == "Daily":
             self.scheduler_thread.scheduler.every().day.at(time_str).do(self.run_scheduled_backup, task_name)
+            print(f"Task {task_name} scheduled daily at {time_str}")
         elif schedule_info["frequency"] == "Weekly":
-            day = schedule_info["day"]
-            self.scheduler_thread.scheduler.every().week.at(time_str).do(self.run_scheduled_backup, task_name)
+            day = schedule_info["day"].lower()
+            day_method = getattr(self.scheduler_thread.scheduler.every(), day)
+            day_method.at(time_str).do(self.run_scheduled_backup, task_name)
+            print(f"Task {task_name} scheduled weekly on {day.capitalize()} at {time_str}")
 
     def run_scheduled_backup(self, task_name):
-        task = self.tasks[task_name]
+        print(f"Running scheduled backup for task: {task_name}")
+        task = self.tasks.get(task_name)
+        if not task:
+            print(f"Task {task_name} not found.")
+            return
+        print(f"Task details: {task}")
         self.source = task["source"]
         self.destination = task["destination"]
         self.start_backup()
@@ -548,9 +559,30 @@ class BackupApp(QWidget):
 
         self.preview_layout.addLayout(lists_layout)
 
+    def is_destination_reachable(self):
+        return os.path.exists(self.destination)
+
+    def handle_backup_error(self, errors):
+        QMessageBox.critical(self, "Backup Error", "\n".join(errors))
+        self.tray_icon.showMessage(
+            "BackupBanana",
+            "Backup failed. Please check the error log.",
+            QSystemTrayIcon.Critical,
+            2000
+        )
+
     def start_backup(self):
         if not self.source or not self.destination:
             QMessageBox.critical(self, "Error", "Both source and destination directories must be set.")
+            return
+
+        if not self.is_destination_reachable():
+            self.tray_icon.showMessage(
+                "BackupBanana",
+                "Destination directory is not reachable. Please check the connection.",
+                QSystemTrayIcon.Warning,
+                2000
+            )
             return
 
         new_files, modified_files, _ = self.get_changes()
@@ -567,7 +599,7 @@ class BackupApp(QWidget):
         self.thread = BackupThread(self.source, self.destination)
         self.thread.progress_update.connect(self.progress_bar.setValue)
         self.thread.backup_finished.connect(self.record_history)
-        self.thread.finished.connect(self.backup_finished)
+        self.thread.error_occurred.connect(self.handle_backup_error)
         self.thread.start()
 
     def backup_finished(self):
