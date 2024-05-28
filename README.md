@@ -13,12 +13,15 @@ BackupBanana is a user-friendly, incremental backup application designed to simp
 - **Progress Bar**: Visual indication of the backup progress.
 - **Error Logging**: Log files and folders that could not be backed up due to permission errors.
 - **History and Logs**: View the history of backups and error logs.
+- **System Tray Notifications**: Receive notifications about the backup status, including task names.
+- **Administrative Privileges**: Ensure the application is run with administrative privileges for full functionality.
 
 ## Getting Started
 
 ### Prerequisites
 
 Before running BackupBanana, you need to have the following installed on your machine:
+- Windows 7 or later
 - Python 3.x
 - PyQt5
 - Matplotlib
@@ -33,10 +36,10 @@ Before running BackupBanana, you need to have the following installed on your ma
 
 
 ### Screenshots
-| ![Screen1](screenshots/add_var.png) |  ![Screen2](screenshots/apply_var.png)  |
-|:-----------------------------------:|:---------------------------------------:|
-|           Add VAR to JSON           |              Apply SYS Var              |
-| ![Screen3](screenshots/SYS_VAR.png) | ![Screen4](screenshots/display_var.png) |
-|          Sys Vars Windows           |              Display VARs               |
+| ![Screen1](screenshots/screen1.png) | ![Screen2](screenshots/screen2.png) |
+|:-----------------------------------:|:-----------------------------------:|
+|               Screen1               |               Screen2               |
+| ![Screen3](screenshots/screen3.png) | ![Screen4](screenshots/screen4.png) |
+|               Screen3               |               Screen4               |
 
 
