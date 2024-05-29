@@ -36,10 +36,10 @@ Before running BackupBanana, you need to have the following installed on your ma
 
 
 ### Screenshots
-| ![Screen1](screenshots/screen1.png) | ![Screen2](screenshots/screen2.png) |
-|:-----------------------------------:|:-----------------------------------:|
-|               Screen1               |               Screen2               |
-| ![Screen3](screenshots/screen3.png) | ![Screen4](screenshots/screen4.png) |
-|               Screen3               |               Screen4               |
+|    ![Screen1](screenshots/main_win.png)     | ![Screen2](screenshots/tasks_lits.png) |
+|:-------------------------------------------:|:--------------------------------------:|
+|                Start Backup                 |           Set up a Task List           |
+| ![Screen3](screenshots/preview_changes.png) |  ![Screen4](screenshots/history.png)   |
+|               Preview Changes               |             Backup Changes             |
 
 
